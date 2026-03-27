@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Chile Noticias - Blog</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('https://images.unsplash.com/photo-1590059536098-999320e8334e?auto=format&fit=crop&w=1200');
+            background-size: cover;
+            color: white;
+            padding: 100px 0;
+        }
+
+        .card-img-top {
+            height: 200px;
+            object-fit: cover;
+            background-color: #eee;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="/">CHILE NOTICIAS</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarMain">
+                <ul class="navbar-nav ms-auto" id="navbar-links">
+                    </ul>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero-section text-center">
+        <div class="container">
+            <h1 class="display-3 fw-bold">Lo último en Chile</h1>
+            <p class="lead">Información veraz, desde el norte hasta la Patagonia.</p>
+        </div>
+    </header>
+
+    <main class="container my-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 id="titulo-seccion">Noticias Recientes</h2>
+            <button id="btn-orden" class="btn btn-outline-secondary btn-sm" onclick="toggleOrden()">
+                Ver más Antiguas
+            </button>
+        </div>
+        <div id="contenedor-noticias" class="row"></div>
+    </main>
+
+    <footer class="bg-dark text-white py-4 mt-5">
+        <div class="container text-center">
+            <p>Chile Noticias &copy; 2026 | Ishka Maison</p>
+        </div>
+    </footer>
+
+    <script>
+        let ordenAsc = false;
+
+        async function cargarNoticias() {
+            const params = new URLSearchParams(window.location.search);
+            const catFiltro = params.get('categoria');
+            if (catFiltro) document.getElementById('titulo-seccion').innerText = `Categoría: ${catFiltro}`;
+
+            try {
+                const res = await fetch('/api/v1/noticias');
+                const { data } = await res.json();
+                const contenedor = document.getElementById('contenedor-noticias');
+
+                let noticiasAMostrar = catFiltro ? data.filter(n => n.categoria === catFiltro) : data;
+
+                noticiasAMostrar.sort((a, b) => {
+                    const fechaA = new Date(a.fecha_creacion);
+                    const fechaB = new Date(b.fecha_creacion);
+                    return ordenAsc ? fechaA - fechaB : fechaB - fechaA;
+                });
+
+                if (noticiasAMostrar.length === 0) {
+                    contenedor.innerHTML = `<div class="col-12 text-center text-muted"><h4>No hay noticias.</h4></div>`;
+                    return;
+                }
+
+                contenedor.innerHTML = noticiasAMostrar.map(n => `
+                    <div class="col-md-4 mb-4">
+                        <div class="card h-100 shadow-sm border-0">
+                            <img src="${n.imagen_url}" class="card-img-top" onerror="this.src='https://picsum.photos/400/200?grayscale'">
+                            <div class="card-body">
+                                <span class="badge bg-primary mb-2">${n.categoria}</span>
+                                <h5 class="card-title">${n.titulo}</h5>
+                                <p class="card-text text-truncate">${n.contenido}</p>
+                                <a href="/detalle.html?id=${n.id}" class="btn btn-outline-dark">Leer más</a>
+                            </div>
+                            <div class="card-footer text-muted small">Por ${n.autor} • ${new Date(n.fecha_creacion).toLocaleDateString()}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) { console.error(error); }
+        }
+
+        function toggleOrden() {
+            ordenAsc = !ordenAsc;
+            document.getElementById('btn-orden').innerText = ordenAsc ? "Ver más Recientes" : "Ver más Antiguas";
+            cargarNoticias();
+        }
+
+        function actualizarNavbar() {
+            const usuario = localStorage.getItem('usuario');
+            const navUl = document.getElementById('navbar-links');
+            const categorias = ['Turismo', 'Tecnología', 'Cultura', 'Deportes'];
+
+            let links = `<li class="nav-item"><a class="nav-link" href="/">Inicio</a></li>`;
+            categorias.forEach(cat => links += `<li class="nav-item"><a class="nav-link" href="/?categoria=${cat}">${cat}</a></li>`);
+
+            if (usuario) {
+                // Caso: Usuario LOGUEADO
+                links += `
+                    <li class="nav-item"><a class="nav-link text-warning fw-bold" href="/crear-noticia.html">+ Publicar</a></li>
+                    <li class="nav-item"><span class="nav-link text-info fw-bold">Hola, ${usuario}</span></li>
+                    <li class="nav-item"><a class="nav-link text-danger" href="#" onclick="logout()">Salir</a></li>`;
+            } else {
+                links += `
+                    <li class="nav-item"><a class="nav-link btn btn-outline-light btn-sm mx-1" href="/login.html">Ingresar</a></li>
+                    <li class="nav-item"><a class="nav-link btn btn-primary btn-sm mx-1 text-white" href="/registro.html">Crear Cuenta</a></li>
+                `;
+            }
+            navUl.innerHTML = links;
+        }
+
+        function logout() { 
+            localStorage.clear(); 
+            window.location.href = '/'; 
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            cargarNoticias();
+            actualizarNavbar();
+        });
+    </script>
+</body>
+</html>

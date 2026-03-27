@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Detalle de Noticia - Chile Noticias</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .noticia-header {
+            height: 400px;
+            background-size: cover;
+            background-position: center;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <nav class="navbar navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="/">← Volver al Inicio</a>
+        </div>
+    </nav>
+
+    <div class="container bg-white p-5 shadow-sm rounded">
+        <div id="contenido-noticia"></div>
+
+        <hr class="my-5">
+        <div class="d-flex align-items-center gap-3 my-4 p-3 bg-light rounded">
+            <button onclick="votar('like')" class="btn btn-outline-primary">
+                👍 <span id="count-likes">0</span>
+            </button>
+            <button onclick="votar('dislike')" class="btn btn-outline-danger">
+                👎 <span id="count-dislikes">0</span>
+            </button>
+            <small class="text-muted" id="lista-likes">Nadie ha dado like aún</small>
+        </div>
+        <hr class="my-5">
+        <section id="seccion-comentarios">
+            <h4>Comentarios</h4>
+
+            <div id="form-comentario-container" class="mb-4 d-none">
+                <div class="mb-3">
+                    <textarea id="nuevo-comentario" class="form-control" rows="3"
+                        placeholder="Escribe tu opinión sobre esta noticia de Chile..."></textarea>
+                </div>
+                <button onclick="enviarComentario()" class="btn btn-primary">Publicar comentario</button>
+            </div>
+
+            <div id="login-alerta" class="alert alert-info">
+                Debes <a href="/login.html">iniciar sesión</a> para comentar.
+            </div>
+
+            <div id="lista-comentarios" class="mt-4">
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const noticiaId = params.get('id');
+        const token = localStorage.getItem('token');
+
+        async function cargarPagina() {
+            if (!noticiaId) return window.location.href = '/';
+
+            if (token) {
+                document.getElementById('form-comentario-container').classList.remove('d-none');
+                document.getElementById('login-alerta').classList.add('d-none');
+            }
+
+            await cargarNoticia();
+            await cargarComentarios();
+        }
+
+        async function cargarNoticia() {
+            const res = await fetch(`/api/v1/noticias/${noticiaId}`);
+            const { data } = await res.json();
+            document.getElementById('contenido-noticia').innerHTML = `
+            <div class="noticia-header" style="background-image: url('${data.imagen_url}')"></div>
+            <h1>${data.titulo}</h1>
+            <p class="text-muted">Categoría: ${data.categoria}</p>
+            <div class="mt-4">${data.contenido}</div>
+        `;
+
+            // Dentro de cargarNoticia()
+            document.getElementById('count-likes').innerText = data.total_likes || 0;
+            document.getElementById('count-dislikes').innerText = data.total_dislikes || 0;
+
+            const nombresLike = data.usuarios_que_dieron_like || [];
+            document.getElementById('lista-likes').innerText = nombresLike.length > 0
+                ? `Likes de: ${nombresLike.join(', ')}`
+                : 'Nadie ha dado like aún';
+        }
+
+        async function cargarComentarios() {
+            const res = await fetch(`/api/v1/comentarios/${noticiaId}`);
+            const { data } = await res.json();
+            const lista = document.getElementById('lista-comentarios');
+
+            if (data.length === 0) {
+                lista.innerHTML = '<p class="text-muted">No hay comentarios aún. ¡Sé el primero!</p>';
+                return;
+            }
+
+            lista.innerHTML = data.map(c => `
+            <div class="card mb-2 border-0 border-start border-4 border-primary bg-light">
+                <div class="card-body py-2">
+                    <p class="mb-1">${c.contenido}</p>
+                    <small class="text-muted fw-bold">${c.autor} • ${new Date(c.fecha_creacion).toLocaleDateString()}</small>
+                </div>
+            </div>
+        `).join('');
+        }
+
+        async function enviarComentario() {
+            const contenido = document.getElementById('nuevo-comentario').value;
+            if (!contenido) return alert("Escribe algo");
+
+            const res = await fetch('/api/v1/comentarios', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ contenido, noticia_id: noticiaId })
+            });
+
+            if (res.ok) {
+                document.getElementById('nuevo-comentario').value = '';
+                await cargarComentarios();
+            } else {
+                alert("Error al publicar");
+            }
+        }
+
+        async function votar(tipo) {
+            if (!token) return alert("Debes iniciar sesión para votar");
+
+            const res = await fetch(`/api/v1/noticias/${noticiaId}/votar`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ tipo }) // 'like' o 'dislike'
+            });
+
+            if (res.ok) {
+                await cargarNoticia(); // Recargamos para ver los nuevos números y nombres
+            } else {
+                const error = await res.json();
+                alert(error.msg || "Error al votar");
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', cargarPagina);
+    </script>
+</body>
+
+</html>
