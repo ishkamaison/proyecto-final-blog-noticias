@@ -5,6 +5,7 @@ Es una aplicación completa que permite la gestión de noticias con un sistema d
 
 ## 🚀 Enlaces del Proyecto
 - **App Desplegada:**  https://blog-noticias-ishka.onrender.com
+- **Repositorio en GitHub:**https://github.com/ishkamaison/proyecto-final-blog-noticias
 
 ## 🛠️ Tecnologías Utilizadas
 - **Backend:** Node.js, Express.
