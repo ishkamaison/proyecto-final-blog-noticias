@@ -4,7 +4,7 @@ Este es el proyecto final para la certificación de **Desarrollo Full Stack Java
 Es una aplicación completa que permite la gestión de noticias con un sistema de interacción social.
 
 ## 🚀 Enlaces del Proyecto
-- **App Desplegada:** [LINK_DE_RENDER_O_GITHUB_PAGES]
+- **App Desplegada:**  https://blog-noticias-ishka.onrender.com
 
 ## 🛠️ Tecnologías Utilizadas
 - **Backend:** Node.js, Express.
